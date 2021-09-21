@@ -9,6 +9,8 @@ pub enum Pieces {
     Pawn,
 }
 
+
+//TODO: change fields to getters to avoid changing type and color :)
 #[derive(Copy, Clone, Debug)]
 pub struct Piece {
     pub color: Color,

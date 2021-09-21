@@ -29,7 +29,7 @@ pub fn print_board(board: &[Option<Piece>; 64]) {
         chars[i] = p;
     }
     let mut rank = 8;
-    print!("    a  b   c   d   e   f   g  h   ");
+    print!("    a   b   c   d   e   f   g   h   ");
     for (i, c) in chars.iter().enumerate() {
         if i % 8 == 0 {
             print!("|\n  ---------------------------------\n{} ", rank);
@@ -57,7 +57,7 @@ fn get_piece_from_ascii(representation: char) -> Pieces {
 }
 
 
-fn translate_tile_to_usize(move_input: &str) -> usize {
+pub fn translate_tile_to_usize(move_input: &str) -> usize {
     if move_input.chars().count() != 2 {
         panic!("Wrong inputsize")
     }
@@ -95,7 +95,7 @@ fn translate_tile_to_usize(move_input: &str) -> usize {
 }
 
 pub struct OneDBoard {
-    pub board: [Option<Piece>; 64],
+    board: [Option<Piece>; 64],
     turn: char,
     castling: [bool; 4], //KQkq (White -> Black, King -> Queen)
     en_passant_target: Option<i8>,
@@ -107,6 +107,14 @@ impl OneDBoard {
     pub fn make_move(&mut self, origin: usize, destination: usize) {
         self.board[destination] = self.board[origin];
         self.board[origin] = None;
+    }
+
+    pub fn get_board(&self) -> [Option<Piece>; 64] {
+        self.board
+    }
+
+    pub fn get_piece(&self, index: usize) -> Option<Piece> {
+        self.board[index]
     }
 
     pub fn new_standard() -> Self {
@@ -151,6 +159,10 @@ impl OneDBoard {
             halfmove_clock: 0,
             fullmove_clock: 1,
         }
+    }
+    
+    pub fn promote(square: i8, new_piece: Piece) {
+        
     }
 }
 
