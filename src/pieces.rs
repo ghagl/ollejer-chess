@@ -1,3 +1,4 @@
+use std::cmp::PartialEq;
 
 #[derive(Copy, Clone, Debug)]
 pub enum Pieces {
@@ -9,7 +10,6 @@ pub enum Pieces {
     Pawn,
 }
 
-
 //TODO: change fields to getters to avoid changing type and color :)
 #[derive(Copy, Clone, Debug)]
 pub struct Piece {
@@ -17,7 +17,7 @@ pub struct Piece {
     pub piece_type: Pieces,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Color {
     Black,
     White,

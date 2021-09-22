@@ -156,18 +156,12 @@ pub fn get_bishop_moves(position: usize) -> Vec<Vec<i8>> {
 }
 
 pub fn get_pawn_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
-    let mut moves: Vec<i8> = vec![7, 8, 9, 16];
-    let current_rank = position / 8;
-    let passant_rank = match color {
-        Black => 1,
-        White => 6,
+    let moves = match color {
+        White => vec![vec![-8], vec![-16], vec![-7, -9]],
+        Black => vec![vec![8], vec![16], vec![7, 9]],
     };
 
-    if let color = White {
-        moves.iter().map(|&m| m * -1);
-    }
-
-    vec![moves]
+    moves
 }
 
 pub fn get_moves_from_piece(piece: Piece, position: usize) -> Vec<Vec<i8>> {

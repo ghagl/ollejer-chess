@@ -1,12 +1,11 @@
-
 use crate::pieces::{
-    Color::{Black, White},
+    Color::{self, Black, White},
     Piece,
     Pieces::{self, Bishop, King, Knight, Pawn, Queen, Rook},
 };
 
-
-pub fn print_board(board: &[Option<Piece>; 64]) {
+pub fn print_board(board_struct: &OneDBoard) {
+    let board = board_struct.get_board();
     let mut chars: [char; 64] = ['E'; 64];
     for (i, piece) in board.iter().enumerate() {
         let p = match piece {
@@ -56,10 +55,9 @@ fn get_piece_from_ascii(representation: char) -> Pieces {
     piece
 }
 
-
-pub fn translate_tile_to_usize(move_input: &str) -> usize {
+pub fn translate_tile_to_usize(move_input: &str) -> Result<usize, &'static str> {
     if move_input.chars().count() != 2 {
-        panic!("Wrong inputsize")
+        return Err("Invalid size of move_input");
     }
 
     let file: usize = match move_input.chars().nth(0) {
@@ -72,49 +70,100 @@ pub fn translate_tile_to_usize(move_input: &str) -> usize {
             'f' => 5,
             'g' => 6,
             'h' => 7,
-            _ => panic!("Invalid filechar")
+            _ => return Err("Invalid filechar"),
         },
-        _ => panic!("Error reading file")
+        _ => return Err("Error parsing file"),
     };
-    let rank: usize = match move_input.chars().nth(1).unwrap().to_string().parse::<usize>() {
+    let rank: usize = match move_input
+        .chars()
+        .nth(1)
+        .unwrap()
+        .to_string()
+        .parse::<usize>()
+    {
         Ok(x) => x,
-        Err(_) => panic!("Error parsing rank"),
+        Err(e) => return Err("Error parsing file"),
     };
     if rank < 0 || rank > 8 {
-        panic!("Rank not valid");
+        return Err("Rank not valid");
     }
     if file < 0 || file > 8 {
-        panic!("File not valid");
+        return Err("File not valid");
     }
-    let cordinate = 8*(8-rank) + file;
-    cordinate
-
-   
-
-
+    let cordinate = 8 * (8 - rank) + file;
+    Ok(cordinate)
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct OneDBoard {
     board: [Option<Piece>; 64],
-    turn: char,
+    turn: Color,
     castling: [bool; 4], //KQkq (White -> Black, King -> Queen)
-    en_passant_target: Option<i8>,
+    en_passant_target: Option<usize>,
     halfmove_clock: u32,
     fullmove_clock: u32,
+    previous_turn_board: [Option<Piece>; 64],
 }
 
 impl OneDBoard {
-    pub fn make_move(&mut self, origin: usize, destination: usize) {
-        self.board[destination] = self.board[origin];
+    pub fn make_move(&mut self, origin: usize, destination: usize) -> Result<(), &'static str> {
+        let unmoved_state = self.board;
+        let origin_piece = self.board[origin];
+
+        let origin_piece: Piece = match origin_piece {
+            Some(p) => p,
+            None => return Err("No piece on that tile!"),
+        };
+
+        let turn = self.turn;
+        let result = match turn {
+            turn if turn == origin_piece.color => Ok(()),
+            _ => return Err("Not this colors turn!"),
+        };
+
+        // Todo Adapt for special moves (Promotion, castle, en passant)
+        self.board[destination] = Some(origin_piece);
         self.board[origin] = None;
+
+        self.turn = match turn {
+            White => Black,
+            Black => White,
+        };
+
+        self.previous_turn_board = unmoved_state;
+        result
     }
 
-    pub fn get_board(&self) -> [Option<Piece>; 64] {
-        self.board
+    // Made after make move
+    pub fn unmake_move(&mut self) -> Result<(), &'static str> {
+        self.board = self.previous_turn_board;
+
+        let turn = self.turn;
+        self.turn = match turn {
+            White => Black,
+            Black => White,
+        };
+        Ok(())
+    }
+    
+    pub fn get_board(&self) -> &[Option<Piece>; 64] {
+        &self.board
+    }
+
+    pub fn get_turn(&self) -> Color{
+        self.turn 
+    }
+
+    pub fn set_piece_UNSAFE(&mut self, position: usize, piece: Option<Piece>) {
+        self.board[position] = piece;
     }
 
     pub fn get_piece(&self, index: usize) -> Option<Piece> {
         self.board[index]
+    }
+
+    pub fn get_en_passant_target(&self) -> Option<usize> {
+        self.en_passant_target
     }
 
     pub fn new_standard() -> Self {
@@ -153,18 +202,14 @@ impl OneDBoard {
 
         OneDBoard {
             board,
-            turn: 'w',
+            turn: White,
             castling: [true; 4],
-            en_passant_target: None,
+            en_passant_target: Some(8), // Change to None
             halfmove_clock: 0,
             fullmove_clock: 1,
+            previous_turn_board: board,
         }
     }
-    
-    pub fn promote(square: i8, new_piece: Piece) {
-        
-    }
+
+    pub fn promote(square: i8, new_piece: Piece) {}
 }
-
-
-
