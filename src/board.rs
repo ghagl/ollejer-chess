@@ -37,8 +37,9 @@ pub fn print_board(board_struct: &OneDBoard) {
 
         print!("| {} ", c);
     }
-    print!("|");
-    println!("");
+    
+    print!("|\n  ---------------------------------");
+    println!("\n    a   b   c   d   e   f   g   h   ");
 }
 
 fn get_piece_from_ascii(representation: char) -> Pieces {
@@ -84,15 +85,36 @@ pub fn translate_tile_to_usize(move_input: &str) -> Result<usize, &'static str> 
         Ok(x) => x,
         Err(e) => return Err("Error parsing file"),
     };
-    if rank < 0 || rank > 8 {
+    if rank > 8 {
         return Err("Rank not valid");
     }
-    if file < 0 || file > 8 {
+    if file > 8 {
         return Err("File not valid");
     }
     let cordinate = 8 * (8 - rank) + file;
     Ok(cordinate)
 }
+
+fn read_promotion() -> Result<Pieces, &'static str> {
+    let mut std_input = String::new();
+    println!("Which piece do you want to promote to: (q, r, b, n)");
+    std::io::stdin()
+        .read_line(&mut std_input)
+        .expect("Error reading");
+
+    let piece_input = &std_input.chars().nth(0);
+
+    let result: Result<Pieces, &'static str> = match piece_input.unwrap() {
+        'q' => Ok(Queen),
+        'n' => Ok(Knight),
+        'b' => Ok(Bishop),
+        'r' => Ok(Rook),
+        _ => Err("Could not read promotion: {}"),
+    };
+
+    result
+}
+
 
 #[derive(Clone, Copy, Debug)]
 pub struct OneDBoard {
@@ -116,12 +138,29 @@ impl OneDBoard {
         };
 
         let turn = self.turn;
-        let result = match turn {
+        let mut result: Result<(), &'static str> = match turn {
             turn if turn == origin_piece.color => Ok(()),
             _ => return Err("Not this colors turn!"),
         };
 
         // Todo Adapt for special moves (Promotion, castle, en passant)
+        
+        if origin_piece.piece_type == Pawn {
+            result = self.move_pawn(origin_piece, origin, destination);
+        }
+        else {
+            self.en_passant_target = None;
+        }
+
+        if origin_piece.piece_type == King {
+            result = self.move_king(origin_piece, origin, destination);
+        }
+
+        if origin_piece.piece_type == Rook {
+            self.move_rook(origin_piece, origin, destination);
+        }
+        
+
         self.board[destination] = Some(origin_piece);
         self.board[origin] = None;
 
@@ -131,19 +170,121 @@ impl OneDBoard {
         };
 
         self.previous_turn_board = unmoved_state;
-        result
+        Ok(())
+    }
+    fn move_rook(&mut self, rook: Piece, origin: usize, destination: usize) -> Result<(), &'static str> {
+        
+        let mut castling = match origin {
+            0 => &self.castling[4],
+            7 => &self.castling[2],
+            56 => &self.castling[1],
+            63 => &self.castling[0],
+            _ => return,
+        };
+        castling = &false;
+
+        Ok(())
+
     }
 
-    // Made after make move
-    pub fn unmake_move(&mut self) -> Result<(), &'static str> {
-        self.board = self.previous_turn_board;
+    fn move_king(&mut self, king: Piece, origin: usize, destination: usize) -> Result<(), &'static str> {
+        let m = destination as i8 - origin as i8;
 
-        let turn = self.turn;
-        self.turn = match turn {
-            White => Black,
-            Black => White,
-        };
+        for i in 0..=4 {
+            self.castling[i] = false;
+        }
+
+        if m == 2 { // Short castle
+            if king.color == White && self.castling[0] {
+                    let rook_pos = destination + 1;
+                    let rook_dest = destination - 1;
+                    self.board[rook_dest] = self.board[rook_pos];
+                    self.board[rook_pos] = None;
+                    self.castling[0] = false;
+                
+            }
+
+            else if king.color == Black && self.castling[1] {
+                let rook_pos = destination + 1;
+                let rook_dest = destination - 1;
+                self.board[rook_dest] = self.board[rook_pos];
+                self.board[rook_pos] = None;
+                self.castling[0] = false;
+            }
+        }
+        if m == -2 { 
+            if king.color == White && self.castling[2] {
+                let rook_pos = destination - 2;
+                let rook_dest = destination + 1;
+                self.board[rook_dest] = self.board[rook_pos];
+                self.board[rook_pos] = None;
+                self.castling[2] = false;
+            }
+            else if king.color == Black && self.castling[3] {
+                let rook_pos = destination - 2;
+                let rook_dest = destination + 1;
+                self.board[rook_dest] = self.board[rook_pos];
+                self.board[rook_pos] = None;
+                self.castling[2] = false;
+            }
+        }
+
         Ok(())
+
+    }
+
+    fn move_pawn(&mut self, pawn: Piece, origin: usize, destination: usize) -> Result<(), &'static str>{
+        let m: i8 = destination as i8 - origin as i8;
+        
+        // Check en passant
+        match self.en_passant_target {
+            Some(ept) => {
+                if (m == -7 || m == -9) && destination == ept { // White made en passant
+                    println!("White made en passant. Removing: {:?}", ept);
+                    print_board(&self);
+                    self.board[ept + 8] = None;
+                }
+                else if (m == 7 || m == 9) && destination == ept { // White made en passantBlack made en passant
+                    println!("Black made en passant. removeign {:?}", ept);
+                    print_board(&self);
+                    self.board[ept - 8] = None;           
+                }
+            }
+            None => (),
+        }
+
+        if m == 16 { // Black made passant
+            let en_passant_pos = destination - 8;
+            self.en_passant_target = Some(en_passant_pos);
+        }
+        else if m == -16 { // White made passant
+            let en_passant_pos = destination + 8;
+            self.en_passant_target = Some(en_passant_pos);
+        }
+        else {
+            self.en_passant_target = None;
+        }
+
+        
+        let destination_rank = destination / 8;
+        let result: Result<(), &'static str>;
+        if pawn.color == White && destination_rank == 0 {
+            result = match read_promotion() {
+                Ok(piece_type) => {self.promote(destination, Piece{color: White, piece_type}); Ok(())},
+                Err(e)         => return Err(e),
+            }
+        }
+        else if pawn.color == Black && destination_rank == 7 {
+            result = match read_promotion() {
+                Ok(piece_type) => {self.promote(destination, Piece{color: Black, piece_type}); Ok(())},
+                Err(e)         => return Err(e),
+            };
+        }
+        else {
+            result = Ok(());
+        }
+
+       Ok(())
     }
     
     pub fn get_board(&self) -> &[Option<Piece>; 64] {
@@ -204,12 +345,14 @@ impl OneDBoard {
             board,
             turn: White,
             castling: [true; 4],
-            en_passant_target: Some(8), // Change to None
+            en_passant_target: None, 
             halfmove_clock: 0,
             fullmove_clock: 1,
             previous_turn_board: board,
         }
     }
 
-    pub fn promote(square: i8, new_piece: Piece) {}
+    pub fn promote(&mut self, position: usize, new_piece: Piece) {
+        self.board[position] = Some(new_piece);
+    }
 }

@@ -1,6 +1,6 @@
 use std::cmp::PartialEq;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Pieces {
     Knight,
     Bishop,

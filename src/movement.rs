@@ -96,7 +96,7 @@ pub fn get_knight_moves(position: usize) -> Vec<Vec<i8>> {
     vec![candidate_moves]
 }
 
-pub fn get_king_moves(position: usize) -> Vec<Vec<i8>> {
+pub fn get_king_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
     let current_rank = position / 8;
     let current_file = position % 8;
 
@@ -117,7 +117,6 @@ pub fn get_king_moves(position: usize) -> Vec<Vec<i8>> {
             moves.push(-9);
         }
     }
-
     // Bottom row moves 7 8 9
     if dist_south > 0 {
         moves.push(8);
@@ -135,7 +134,14 @@ pub fn get_king_moves(position: usize) -> Vec<Vec<i8>> {
     if dist_east > 0 {
         moves.push(1);
     }
-    vec![moves]
+
+    let castle_moves = vec![2, -2];
+    
+
+    let mut all_moves: Vec<Vec<i8>> = Vec::new();
+    all_moves.push(moves);
+    all_moves.push(castle_moves);
+    all_moves
 }
 
 pub fn get_queen_moves(position: usize) -> Vec<Vec<i8>> {
@@ -156,11 +162,25 @@ pub fn get_bishop_moves(position: usize) -> Vec<Vec<i8>> {
 }
 
 pub fn get_pawn_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
-    let moves = match color {
+    let mut moves = match color {
         White => vec![vec![-8], vec![-16], vec![-7, -9]],
         Black => vec![vec![8], vec![16], vec![7, 9]],
     };
 
+    let current_file = position % 8;
+    if current_file == 0 {
+        match color {
+            White => moves.get_mut(2).unwrap().remove(1),
+            Black => moves.get_mut(2).unwrap().remove(0),
+        };
+    }
+    else if current_file == 7 {
+        match color {
+            White => moves.get_mut(2).unwrap().remove(0),
+            Black => moves.get_mut(2).unwrap().remove(1),
+        };
+    }
+    
     moves
 }
 
@@ -170,7 +190,7 @@ pub fn get_moves_from_piece(piece: Piece, position: usize) -> Vec<Vec<i8>> {
         Bishop => get_bishop_moves(position),
         Rook => get_rook_moves(position),
         Queen => get_queen_moves(position),
-        King => get_king_moves(position),
+        King => get_king_moves(position, piece.color),
         Pawn => get_pawn_moves(position, piece.color),
         _ => panic!("Error! Cant get move from unknown piece."),
     };
