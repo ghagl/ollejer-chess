@@ -136,7 +136,6 @@ pub fn get_king_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
     }
 
     let castle_moves = vec![2, -2];
-    
 
     let mut all_moves: Vec<Vec<i8>> = Vec::new();
     all_moves.push(moves);
@@ -173,14 +172,13 @@ pub fn get_pawn_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
             White => moves.get_mut(2).unwrap().remove(1),
             Black => moves.get_mut(2).unwrap().remove(0),
         };
-    }
-    else if current_file == 7 {
+    } else if current_file == 7 {
         match color {
             White => moves.get_mut(2).unwrap().remove(0),
             Black => moves.get_mut(2).unwrap().remove(1),
         };
     }
-    
+
     moves
 }
 

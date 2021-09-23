@@ -187,9 +187,7 @@ fn validate_pawn_moves(
         match tile {
             Some(piece) => match this_pawn_color {
                 this_pawn_color if this_pawn_color == piece.color => continue,
-                _ => {
-                    valid_capturing_moves.push(*cm)
-                }
+                _ => valid_capturing_moves.push(*cm),
             },
             // None should check if this square is en passant square
             None => match en_passant_position {
@@ -209,35 +207,38 @@ fn validate_pawn_moves(
     valid_moves
 }
 
-fn validate_castle_moves(one_d_board: &mut board::OneDBoard, possible_castle_moves: Vec<i8>, position: usize) -> Vec<i8> {    
+fn validate_castle_moves(
+    one_d_board: &mut board::OneDBoard,
+    possible_castle_moves: Vec<i8>,
+    position: usize,
+) -> Vec<i8> {
     let mut valid_castle_moves: Vec<i8> = Vec::new();
     let this_king = one_d_board.get_piece(position).unwrap();
     for pcm in possible_castle_moves {
         let dest = position as i8 + pcm;
         let dest = dest as usize;
-    
-        
-        
+
         let mut largest = 0;
         let mut smallest = 0;
         if dest > position {
             largest = dest;
             smallest = position;
-        }
-        else {
+        } else {
             largest = position;
             smallest = dest;
         }
         let mut move_alowed: bool = true;
         for square in smallest..=largest {
             if check_if_square_is_attacked(one_d_board, this_king.color, square) {
-                println!("Attaked");
                 move_alowed = false;
-                break
+                break;
             }
             if square != position {
                 match one_d_board.get_piece(square) {
-                    Some(piece) => {println!("Blocking piece at {}", square); move_alowed = false; break},
+                    Some(piece) => {
+                        move_alowed = false;
+                        break;
+                    }
                     None => (),
                 }
             }
@@ -247,7 +248,6 @@ fn validate_castle_moves(one_d_board: &mut board::OneDBoard, possible_castle_mov
             valid_castle_moves.push(pcm)
         }
     }
-    println!("Castle moves: {:?}", valid_castle_moves);
     valid_castle_moves
 }
 
@@ -255,19 +255,16 @@ fn validate_king_moves(
     one_d_board: &mut board::OneDBoard,
     all_moves: Vec<Vec<i8>>,
     position: usize,
-    check_castle_moves: bool) -> Vec<i8> {
-    
-        let default_moves = vec![all_moves.get(0).unwrap().to_vec()];
+    check_castle_moves: bool,
+) -> Vec<i8> {
+    let default_moves = vec![all_moves.get(0).unwrap().to_vec()];
     let mut valid_moves = validate_fixed_moves(one_d_board, default_moves, position);
     if check_castle_moves {
-        println!("Checking castleing {}", position);
         let castle_moves = all_moves.get(1).unwrap().to_vec();
         let valid_castle_moves = validate_castle_moves(one_d_board, castle_moves, position);
         valid_moves.extend(valid_castle_moves);
     }
-    else {
-        println!("Wont check if castle {}", position);
-    }
+
     valid_moves
 }
 
@@ -275,7 +272,8 @@ fn get_valid_moves_from_piece(
     one_d_board: &mut board::OneDBoard,
     piece: pieces::Piece,
     position: usize,
-    extra_validation: bool) -> Vec<i8> {
+    extra_validation: bool,
+) -> Vec<i8> {
     let moves = movement::get_moves_from_piece(piece, position);
 
     // Board legal moves
@@ -289,28 +287,28 @@ fn get_valid_moves_from_piece(
         _ => panic!("Error! Cant get move from unknown piece."), //WARNING WTF IS THIS GHOST
     };
 
-
     // Check if moves selfchecks
     if extra_validation {
         let mut valid_moves = Vec::new();
         for valid_move in board_legal_moves {
             if !check_if_move_checks_yourself(one_d_board, position, valid_move) {
                 valid_moves.push(valid_move);
-            }
-            else {
+            } else {
                 let dest = position as i8 + valid_move;
                 let dest = dest as usize;
-                println!("You will be checked if you goes to {}. Try another piece", dest);
+                println!(
+                    "You will be checked if you goes to {}. Try another piece",
+                    dest
+                );
             }
         }
         return valid_moves;
-
     }
 
     board_legal_moves
 }
 
-fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize{
+fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize {
     if depth == 0 {
         return 1;
     }
@@ -324,9 +322,9 @@ fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize{
 
         let piece_color = piece.color;
         let turn = one_d_board.get_turn();
-        
+
         match turn {
-            turn if turn == piece_color =>(),
+            turn if turn == piece_color => (),
             _ => continue,
         }
         let valid_moves = get_valid_moves_from_piece(one_d_board, piece, pos, true);
@@ -336,8 +334,7 @@ fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize{
 
             let mut new_board = one_d_board.clone();
             let result = new_board.make_move(pos, dest);
-            count += every_move(&mut new_board, depth-1);
-
+            count += every_move(&mut new_board, depth - 1);
         }
     }
     count
@@ -350,14 +347,14 @@ fn get_king_pos(one_d_board: &board::OneDBoard, king_color: pieces::Color) -> us
             Some(p) => p,
             None => continue,
         };
-        
+
         match king_color {
-            king_color if king_color == piece.color =>(),
+            king_color if king_color == piece.color => (),
             _ => continue,
         }
 
         let piece_type = piece.piece_type;
-        match  piece_type {
+        match piece_type {
             piece_type if piece_type == pieces::Pieces::King => return pos,
             _ => continue,
         }
@@ -365,7 +362,11 @@ fn get_king_pos(one_d_board: &board::OneDBoard, king_color: pieces::Color) -> us
     panic!(format!("No king of color: {:?} on the board!", king_color));
 }
 
-fn check_if_square_is_attacked(current_board: &mut board::OneDBoard, attacking_color: pieces::Color, pos: usize) -> bool {
+fn check_if_square_is_attacked(
+    current_board: &mut board::OneDBoard,
+    attacking_color: pieces::Color,
+    pos: usize,
+) -> bool {
     for pos in 0..64 {
         // get enemy piece
         let square = current_board.get_piece(pos);
@@ -380,7 +381,7 @@ fn check_if_square_is_attacked(current_board: &mut board::OneDBoard, attacking_c
         }
 
         let valid_moves = get_valid_moves_from_piece(current_board, piece, pos, false);
-        
+
         for valid_move in valid_moves {
             let dest = pos as i8 + valid_move;
             let dest = dest as usize;
@@ -390,10 +391,9 @@ fn check_if_square_is_attacked(current_board: &mut board::OneDBoard, attacking_c
         }
     }
     false
-
 }
 
-fn check_if_team_is_in_check(current_board: &mut board::OneDBoard, color: pieces::Color) -> bool {  
+fn check_if_team_is_in_check(current_board: &mut board::OneDBoard, color: pieces::Color) -> bool {
     for pos in 0..64 {
         // get enemy piece
         let tile = current_board.get_piece(pos);
@@ -421,14 +421,18 @@ fn check_if_team_is_in_check(current_board: &mut board::OneDBoard, color: pieces
     false
 }
 
-fn check_if_move_checks_yourself(current_board: &mut board::OneDBoard, origin: usize, a_move: i8) -> bool {
+fn check_if_move_checks_yourself(
+    current_board: &mut board::OneDBoard,
+    origin: usize,
+    a_move: i8,
+) -> bool {
     let mut new_board = current_board.clone();
     let color: pieces::Color = current_board.get_turn();
     let dest = origin as i8 + a_move;
     let dest = dest as usize;
     new_board.make_move(origin, dest);
     let checked = check_if_team_is_in_check(&mut new_board, color);
-    return checked
+    return checked;
 }
 
 fn read_move() -> Result<(usize, usize), &'static str> {
@@ -483,12 +487,11 @@ fn advance_piece(one_d_board: &mut board::OneDBoard) -> Result<(), &'static str>
 }
 
 fn main() {
-
     let mut chess_obj = board::OneDBoard::new_standard();
     //println!("{}", get_king_pos(&mut chess_obj, pieces::Color::White));
-    
+
     let c = every_move(&mut chess_obj, 3);
-    println!("Moves: {}",c );
+    println!("Moves: {}", c);
 
     let mut t = 0;
     while t < 100 {
@@ -496,16 +499,13 @@ fn main() {
         println!("EPT: {:?}", ept);
         {
             board::print_board(&chess_obj);
-        
         }
         let turn = chess_obj.get_turn();
-        
+
         if check_if_team_is_in_check(&mut chess_obj, turn) {
             println!("You are in Check!");
         }
-        
 
-        
         let result = advance_piece(&mut chess_obj);
         match result {
             Ok(_) => println!("U made a valid move, Congrats!"),
