@@ -201,42 +201,38 @@ impl OneDBoard {
 
         if m == 2 {
             // Short castle
-            if king.color == White && self.castling[0] {
-                println!("White short castle");
-                let rook_pos = destination + 1;
-                let rook_dest = destination - 1;
-                println!("{} {} {} {}", origin, destination, rook_pos, rook_dest);
+            let rook_pos = destination + 1;
+            let rook_dest = destination - 1;
+            if (king.color == White && self.castling[0]) || (king.color == Black && self.castling[1]) {
                 self.board[rook_dest] = self.board[rook_pos];
                 self.board[destination] = self.board[origin];
                 self.board[rook_pos] = None;
                 self.board[origin] = None;
-                self.castling[0] = false;
-            } else if king.color == Black && self.castling[1] {
-                let rook_pos = destination + 1;
-                let rook_dest = destination - 1;
-                self.board[rook_dest] = self.board[rook_pos];
-                self.board[destination] = self.board[origin];
-                self.board[rook_pos] = None;
-                self.board[origin] = None;
-                self.castling[0] = false;
+                if king.color == White {
+                    self.castling[0] = false;
+                }
+                else if king.color == Black{
+                    self.castling[2] = false;
+                }
+
+
+
             }
         } else if m == -2 {
-            if king.color == White && self.castling[2] {
-                let rook_pos = destination - 2;
-                let rook_dest = destination + 1;
+            // Short castle
+            let rook_pos = destination - 2;
+            let rook_dest = destination + 1;
+            if (king.color == White && self.castling[1]) || (king.color == Black && self.castling[3]) {
                 self.board[rook_dest] = self.board[rook_pos];
                 self.board[destination] = self.board[origin];
                 self.board[rook_pos] = None;
                 self.board[origin] = None;
-                self.castling[2] = false;
-            } else if king.color == Black && self.castling[3] {
-                let rook_pos = destination - 2;
-                let rook_dest = destination + 1;
-                self.board[rook_dest] = self.board[rook_pos];
-                self.board[destination] = self.board[origin];
-                self.board[rook_pos] = None;
-                self.board[origin] = None;
-                self.castling[2] = false;
+                if king.color == White {
+                    self.castling[1] = false;
+                }
+                else if king.color == Black{
+                    self.castling[3] = false;
+                }
             }
         } else {
             self.board[destination] = self.board[origin];
