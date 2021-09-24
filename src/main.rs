@@ -31,6 +31,12 @@ fn calculate_target_pos(position: usize, a_move: i8) -> usize {
     target
 }
 
+fn calculate_dest(origin: usize, a_move: i8) -> usize {
+    let dest = origin as i8 + a_move;
+    let dest = dest as usize;
+    dest
+}
+
 fn validate_fixed_moves(
     one_d_board: &board::OneDBoard,
     all_moves: Vec<Vec<i8>>,
@@ -215,8 +221,7 @@ fn validate_castle_moves(
     let mut valid_castle_moves: Vec<i8> = Vec::new();
     let this_king = one_d_board.get_piece(position).unwrap();
     for pcm in possible_castle_moves {
-        let dest = position as i8 + pcm;
-        let dest = dest as usize;
+        let dest = calculate_dest(position, pcm);
 
         let mut largest = 0;
         let mut smallest = 0;
@@ -294,8 +299,7 @@ fn get_valid_moves_from_piece(
             if !check_if_move_checks_yourself(one_d_board, position, valid_move) {
                 valid_moves.push(valid_move);
             } else {
-                let dest = position as i8 + valid_move;
-                let dest = dest as usize;
+                let dest = calculate_dest(position, valid_move);
                 println!(
                     "You will be checked if you goes to {}. Try another piece",
                     dest
@@ -329,8 +333,7 @@ fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize {
         }
         let valid_moves = get_valid_moves_from_piece(one_d_board, piece, pos, true);
         for vm in valid_moves {
-            let dest = pos as i8 + vm;
-            let dest = dest as usize;
+            let dest = calculate_dest(pos, vm);
 
             let mut new_board = one_d_board.clone();
             let result = new_board.make_move(pos, dest);
@@ -383,8 +386,7 @@ fn check_if_square_is_attacked(
         let valid_moves = get_valid_moves_from_piece(current_board, piece, pos, false);
 
         for valid_move in valid_moves {
-            let dest = pos as i8 + valid_move;
-            let dest = dest as usize;
+            let dest = calculate_dest(pos, valid_move);
             if dest == pos {
                 return true;
             }
@@ -411,8 +413,7 @@ fn check_if_team_is_in_check(current_board: &mut board::OneDBoard, color: pieces
         let valid_moves = get_valid_moves_from_piece(current_board, piece, pos, false);
         let allied_king_pos = get_king_pos(&current_board, color);
         for valid_move in valid_moves {
-            let dest = pos as i8 + valid_move;
-            let dest = dest as usize;
+            let dest = calculate_dest(pos, valid_move);
             if dest == allied_king_pos {
                 return true;
             }
@@ -428,8 +429,7 @@ fn check_if_move_checks_yourself(
 ) -> bool {
     let mut new_board = current_board.clone();
     let color: pieces::Color = current_board.get_turn();
-    let dest = origin as i8 + a_move;
-    let dest = dest as usize;
+    let dest = calculate_dest(origin, a_move);
     new_board.make_move(origin, dest);
     let checked = check_if_team_is_in_check(&mut new_board, color);
     return checked;
@@ -490,7 +490,7 @@ fn main() {
     let mut chess_obj = board::OneDBoard::new_standard();
     //println!("{}", get_king_pos(&mut chess_obj, pieces::Color::White));
 
-    let c = every_move(&mut chess_obj, 3);
+    let c = every_move(&mut chess_obj, 4);
     println!("Moves: {}", c);
 
     let mut t = 0;
@@ -511,7 +511,7 @@ fn main() {
             Ok(_) => println!("U made a valid move, Congrats!"),
             Err(e) => println!("{}", e),
         }
-        thread::sleep(time::Duration::from_millis(300));
+        thread::sleep(time::Duration::from_millis(200));
 
         t += 1;
     }
