@@ -115,6 +115,39 @@ fn read_promotion() -> Result<Pieces, &'static str> {
     result
 }
 
+fn string_to_board(board_string: String) -> [Option<Piece>; 64] {
+    let mut board: [Option<Piece>; 64] = [None; 64];
+
+    let mut position: usize = 0;
+    for c in board_string.chars() {
+        if c == '/' {
+            continue;
+        } else if c.is_alphabetic() {
+            let piece_type = get_piece_from_ascii(c);
+            if c.is_ascii_lowercase() {
+                let piece = Piece {
+                    color: Black,
+                    piece_type,
+                };
+                board[position] = Some(piece);
+            } else if c.is_ascii_uppercase() {
+                let piece = Piece {
+                    color: White,
+                    piece_type,
+                };
+                board[position] = Some(piece);
+            }
+            position += 1;
+        } else if c.is_digit(10) {
+            for _ in 0..c.to_digit(10).unwrap() {
+                board[position] = None;
+                position += 1;
+            }
+        }
+    }
+board
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct OneDBoard {
     board: [Option<Piece>; 64],
@@ -214,9 +247,6 @@ impl OneDBoard {
                 else if king.color == Black{
                     self.castling[2] = false;
                 }
-
-
-
             }
         } else if m == -2 {
             // Short castle
@@ -340,40 +370,73 @@ impl OneDBoard {
     pub fn get_en_passant_target(&self) -> Option<usize> {
         self.en_passant_target
     }
+    
+    
+    
+    pub fn new_from_FEN(fen: String) -> Self {
+        let split: Vec<String> = fen.split(" ").map(|s| s.to_string()).collect();
+        let board = split.get(0).unwrap().to_string();
+        let board = string_to_board(board);
 
-    pub fn new_standard() -> Self {
+        let turn = split.get(1).unwrap();
+        let turn = &turn[..];
+        let turn = match turn {
+            "w" => White,
+            "b" => Black,
+            _ => panic!("Error parsing FEN turn"),
+        };
+
+        let castle_avalability_str = split.get(2).unwrap().to_string();
+        let mut castle_avalability: [bool; 4] = [false; 4];
+        for c in castle_avalability_str.chars() {
+            match c {
+                'K' => castle_avalability[0] = true,
+                'Q' => castle_avalability[1] = true,
+                'k' => castle_avalability[2] = true,
+                'q' => castle_avalability[3] = true,
+                _  => (),
+            }
+        }
+
+        let en_passant_target = split.get(3).unwrap();
+        let en_passant_target = &en_passant_target[..];
+        let en_passant_target: Option<usize> = match en_passant_target {
+            "-" => None,
+            _ => match translate_tile_to_usize(en_passant_target) {
+                Ok(pos) => Some(pos),
+                Err(e) => panic!(e),
+            },
+        };
+
+        let halfmove_clock = split.get(4).unwrap();
+        let halfmove_clock: u32 = match halfmove_clock.parse::<u32>() {
+            Ok(halfmoves) => halfmoves,
+            Err(e) => panic!(e),
+        };
+
+        let fullmove_clock = split.get(4).unwrap();
+        let fullmove_clock: u32 = match fullmove_clock.parse::<u32>() {
+            Ok(fullmoves) => fullmoves,
+            Err(e) => panic!(e),
+        }; 
+
+        OneDBoard {
+            board,
+            turn: White,
+            castling: castle_avalability,
+            en_passant_target,
+            halfmove_clock,
+            fullmove_clock,
+            previous_turn_board: board,
+        }
+
+    }  
+
+    pub fn new() -> Self {
         let fen: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
         let split: Vec<String> = fen.split(" ").map(|s| s.to_string()).collect();
         let board_str: String = split.get(0).unwrap().to_string();
-        let mut board: [Option<Piece>; 64] = [None; 64];
-
-        let mut position: usize = 0;
-        for c in board_str.chars() {
-            if c == '/' {
-                continue;
-            } else if c.is_alphabetic() {
-                let piece_type = get_piece_from_ascii(c);
-                if c.is_ascii_lowercase() {
-                    let piece = Piece {
-                        color: Black,
-                        piece_type,
-                    };
-                    board[position] = Some(piece);
-                } else if c.is_ascii_uppercase() {
-                    let piece = Piece {
-                        color: White,
-                        piece_type,
-                    };
-                    board[position] = Some(piece);
-                }
-                position += 1;
-            } else if c.is_digit(10) {
-                for _ in 0..c.to_digit(10).unwrap() {
-                    board[position] = None;
-                    position += 1;
-                }
-            }
-        }
+        let board = string_to_board(board_str);
 
         OneDBoard {
             board,
