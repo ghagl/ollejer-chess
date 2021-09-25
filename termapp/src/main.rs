@@ -4,7 +4,7 @@ use ollejer_chess::{board, rules};
 
 
 fn main() {
-    let mut chess_obj = board::OneDBoard::new_standard();
+    let mut chess_obj = board::OneDBoard::new_from_FEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
     //println!("{}", get_king_pos(&mut chess_obj, pieces::Color::White));
 
     let c = rules::every_move(&mut chess_obj, 4);
@@ -20,6 +20,8 @@ fn main() {
         let turn = chess_obj.get_turn();
 
         if rules::check_if_team_is_in_check(&mut chess_obj, turn) {
+            
+            
             println!("You are in Check!");
         }
 
