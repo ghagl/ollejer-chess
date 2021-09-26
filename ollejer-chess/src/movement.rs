@@ -3,7 +3,7 @@ use std::cmp::min;
 use crate::pieces::{
     Color::{self, Black, White},
     Piece,
-    Pieces::{self, Bishop, King, Knight, Pawn, Queen, Rook},
+    Pieces::{Bishop, King, Knight, Pawn, Queen, Rook},
 };
 
 fn get_moves_from_direction(dir: i8, range: usize) -> Vec<i8> {
@@ -96,7 +96,7 @@ pub fn get_knight_moves(position: usize) -> Vec<Vec<i8>> {
     vec![candidate_moves]
 }
 
-pub fn get_king_moves(position: usize, color: Color) -> Vec<Vec<i8>> {
+pub fn get_king_moves(position: usize) -> Vec<Vec<i8>> {
     let current_rank = position / 8;
     let current_file = position % 8;
 
@@ -188,13 +188,10 @@ pub fn get_moves_from_piece(piece: Piece, position: usize) -> Vec<Vec<i8>> {
         Bishop => get_bishop_moves(position),
         Rook => get_rook_moves(position),
         Queen => get_queen_moves(position),
-        King => get_king_moves(position, piece.color),
+        King => get_king_moves(position),
         Pawn => get_pawn_moves(position, piece.color),
         _ => panic!("Error! Cant get move from unknown piece."),
     };
     moves
 }
 
-fn main() {
-    println!("0");
-}

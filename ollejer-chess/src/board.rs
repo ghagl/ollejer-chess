@@ -83,7 +83,7 @@ pub fn translate_tile_to_usize(move_input: &str) -> Result<usize, &'static str> 
         .parse::<usize>()
     {
         Ok(x) => x,
-        Err(e) => return Err("Error parsing file"),
+        Err(_) => return Err("Error parsing file"),
     };
     if rank > 8 {
         return Err("Rank not valid");
@@ -160,7 +160,7 @@ pub struct OneDBoard {
 }
 
 impl OneDBoard {
-    pub fn make_move(&mut self, origin: usize, destination: usize) -> Result<(), &'static str> {
+    pub fn make_move(&mut self, origin: usize, destination: usize, debug: bool) -> Result<(), &'static str> {
         let unmoved_state = self.board;
         let origin_piece = self.board[origin];
 
@@ -170,7 +170,7 @@ impl OneDBoard {
         };
 
         let turn = self.turn;
-        let mut result: Result<(), &'static str> = match turn {
+        let mut _result: Result<(), &'static str> = match turn {
             turn if turn == origin_piece.color => Ok(()),
             _ => return Err("Not this colors turn!"),
         };
@@ -178,18 +178,18 @@ impl OneDBoard {
         // Todo Adapt for special moves (Promotion, castle, en passant)
         let mut normal_move = true;
         if origin_piece.piece_type == Pawn {
-            result = self.move_pawn(origin_piece, origin, destination);
+            _result = self.move_pawn(origin_piece, origin, destination, debug);
         } else {
             self.en_passant_target = None;
         }
 
         if origin_piece.piece_type == King {
-            result = self.move_king(origin_piece, origin, destination);
+            _result = self.move_king(origin_piece, origin, destination, debug);
             normal_move = false;
         }
 
         if origin_piece.piece_type == Rook {
-            self.move_rook(origin_piece, origin, destination);
+            _result = self.move_rook(origin_piece, origin, destination);
         }
 
         if normal_move {
@@ -211,15 +211,19 @@ impl OneDBoard {
         origin: usize,
         destination: usize,
     ) -> Result<(), &'static str> {
-        let mut castling = match origin {
-            0 => &self.castling[3],
-            7 => &self.castling[2],
-            56 => &self.castling[1],
-            63 => &self.castling[0],
-            _ => return Ok(()),
-        };
 
-        castling = &false;
+        if origin == 0 {
+            self.castling[3] = false;
+        }
+        else if origin == 7 {
+            self.castling[2] = false;
+        }
+        else if origin == 56 {
+            self.castling[1] = false;
+        }
+        else if origin == 63 {
+            self.castling[0] = false;
+        }
 
         Ok(())
     }
@@ -229,6 +233,7 @@ impl OneDBoard {
         king: Piece,
         origin: usize,
         destination: usize,
+        debug: bool,
     ) -> Result<(), &'static str> {
         let m = destination as i8 - origin as i8;
 
@@ -243,11 +248,19 @@ impl OneDBoard {
                 self.board[origin] = None;
                 if king.color == White {
                     self.castling[0] = false;
+                    if debug {
+                        println!("White castled Short");
+                    }
                 }
                 else if king.color == Black{
                     self.castling[2] = false;
+                    if debug {
+                        println!("Black castled Short");
+                    }
                 }
             }
+
+
         } else if m == -2 {
             // Short castle
             let rook_pos = destination - 2;
@@ -259,11 +272,21 @@ impl OneDBoard {
                 self.board[origin] = None;
                 if king.color == White {
                     self.castling[1] = false;
+                    if debug {
+                        println!("White castled long");
+                    }
+                    
+
                 }
                 else if king.color == Black{
                     self.castling[3] = false;
+                    if debug {
+                        println!("Black castled long");
+                    }
+                    
                 }
             }
+            
         } else {
             self.board[destination] = self.board[origin];
             self.board[origin] = None;
@@ -281,6 +304,7 @@ impl OneDBoard {
         pawn: Piece,
         origin: usize,
         destination: usize,
+        debug: bool,
     ) -> Result<(), &'static str> {
         let m: i8 = destination as i8 - origin as i8;
 
@@ -289,13 +313,15 @@ impl OneDBoard {
             Some(ept) => {
                 if (m == -7 || m == -9) && destination == ept {
                     // White made en passant
-                    println!("White made en passant. Removing: {:?}", ept);
-                    print_board(&self);
+                    if debug {
+                        println!("White made en passant. Removing: {:?}", ept);
+                    }
                     self.board[ept + 8] = None;
                 } else if (m == 7 || m == 9) && destination == ept {
-                    // White made en passantBlack made en passant
-                    println!("Black made en passant. removeign {:?}", ept);
-                    print_board(&self);
+                    // Black made en passant
+                    if debug {
+                        println!("Black made en passant. Removing {:?}", ept);
+                    }
                     self.board[ept - 8] = None;
                 }
             }
@@ -304,10 +330,12 @@ impl OneDBoard {
 
         if m == 16 {
             // Black made passant
+            // println!("Black made passant");
             let en_passant_pos = destination - 8;
             self.en_passant_target = Some(en_passant_pos);
         } else if m == -16 {
             // White made passant
+            // println!("White made passant");
             let en_passant_pos = destination + 8;
             self.en_passant_target = Some(en_passant_pos);
         } else {
@@ -370,6 +398,10 @@ impl OneDBoard {
     pub fn get_en_passant_target(&self) -> Option<usize> {
         self.en_passant_target
     }
+
+    pub fn get_castles(&self) -> [bool; 4] {
+        self.castling
+    }
     
     
     
@@ -404,7 +436,7 @@ impl OneDBoard {
             "-" => None,
             _ => match translate_tile_to_usize(en_passant_target) {
                 Ok(pos) => Some(pos),
-                Err(e) => panic!(e),
+                Err(e) => panic!("Error rading en passant target: {}", e),
             },
         };
 

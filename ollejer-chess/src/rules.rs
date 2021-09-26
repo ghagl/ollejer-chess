@@ -1,26 +1,59 @@
-use std::io;
-use std::{thread, time};
 use crate::board;
 use crate::movement;
-use crate::pieces;
+use crate::pieces::{self, Color::{Black, White}};
 
 
 //TODO CHANGE NAME TO rules.rs
 
-pub fn print_all_moves(one_d_board: &board::OneDBoard) {
-    let board_array = one_d_board.get_board();
+pub fn print_all_valid_moves(one_d_board: &mut board::OneDBoard, only_match_turn: bool) {
+    let board_array = one_d_board.clone();
+    let board_array = board_array.get_board();
     for (pos, tile) in board_array.iter().enumerate() {
+        
         match tile {
-            Some(t) => {
+            Some(_t) => {
                 let piece = one_d_board.get_piece(pos).unwrap();
-                let moves = movement::get_moves_from_piece(piece, pos);
-                println!("{:?} | {:?}", piece.piece_type, moves);
+                if only_match_turn {
+                    let turn = one_d_board.get_turn();
+                    match turn {
+                        turn if turn == piece.color => (),
+                        _ => continue,
+                    }
+                }
+                let moves = get_valid_moves_from_piece(one_d_board, piece, pos, true);
+                println!("{:?} {}| {:?}", piece.piece_type, pos, moves);
             }
             None => continue,
         };
     }
 }
+pub fn get_all_valid_moves(one_d_board: &mut board::OneDBoard, only_match_turn: bool) -> Vec<Vec<i8>> {
+    let board_array = one_d_board.clone();
+    let board_array = board_array.get_board();
 
+    let mut all_moves: Vec<Vec<i8>> = Vec::new();
+    for (pos, tile) in board_array.iter().enumerate() {
+        
+        match tile {
+            Some(_t) => {
+                let piece = one_d_board.get_piece(pos).unwrap();
+                if only_match_turn {
+                    let turn = one_d_board.get_turn();
+                    match turn {
+                        turn if turn == piece.color => (),
+                        _ => continue,
+                    }
+                }
+                let moves = get_valid_moves_from_piece(one_d_board, piece, pos, true);
+                if moves.len() > 0 {
+                    all_moves.push(moves);
+                }
+            }
+            None => continue,
+        };
+    }
+    all_moves
+}
 fn denest_nested_moves(nested: Vec<Vec<i8>>) -> Vec<i8> {
     nested.into_iter().flat_map(|v| v).collect()
 }
@@ -44,10 +77,9 @@ fn validate_fixed_moves(
 ) -> Vec<i8> {
     let all_moves: Vec<i8> = denest_nested_moves(all_moves);
     let mut valid_moves: Vec<i8> = Vec::new();
-    let board_array = one_d_board.get_board();
     let this_piece_color = one_d_board.get_piece(position).unwrap().color;
 
-    for (i, a_move) in all_moves.iter().enumerate() {
+    for a_move in all_moves.iter() {
         let target = calculate_target_pos(position, *a_move);
         match one_d_board.get_piece(target) {
             Some(target_piece) => match this_piece_color {
@@ -67,7 +99,6 @@ fn validate_sliding_moves(
 ) -> Vec<i8> {
     // [[7, 14], [8, 16, 24]]
     let mut valid_moves: Vec<i8> = Vec::new();
-    let board_array = one_d_board.get_board();
     let this_slider_color = one_d_board.get_piece(position).unwrap().color;
 
     for direction in all_moves {
@@ -144,7 +175,7 @@ fn validate_straight_moves_for_pawn(
         //      break inner loop and include current if enemy
         let target = calculate_target_pos(position, *a_move);
         match one_d_board.get_piece(target) {
-            Some(target_piece) => break,
+            Some(_) => break,
 
             None => valid_straight_moves.push(*a_move),
         }
@@ -160,7 +191,7 @@ fn validate_pawn_moves(
     let mut valid_moves: Vec<i8> = Vec::new();
 
     let regular_moves = all_moves.get(0).unwrap();
-    let mut passant_moves = all_moves.get(1).unwrap();
+    let passant_moves = all_moves.get(1).unwrap();
     let mut valid_passant_moves = Vec::new();
 
     let this_pawn_color = one_d_board.get_piece(position).unwrap().color;
@@ -178,7 +209,7 @@ fn validate_pawn_moves(
     // Get non blocked straight moves
     let straight_moves: Vec<i8> =
         denest_nested_moves(vec![regular_moves.to_vec(), valid_passant_moves.to_vec()]);
-    let mut valid_straight_moves: Vec<i8> =
+    let valid_straight_moves: Vec<i8> =
         validate_straight_moves_for_pawn(one_d_board, straight_moves, position);
 
     // Get en passant moves
@@ -206,8 +237,6 @@ fn validate_pawn_moves(
         }
     }
 
-    let this_pawn_color = one_d_board.get_piece(position).unwrap().color;
-
     valid_moves.extend(valid_straight_moves);
     valid_moves.extend(valid_capturing_moves);
     valid_moves
@@ -220,7 +249,23 @@ fn validate_castle_moves(
 ) -> Vec<i8> {
     let mut valid_castle_moves: Vec<i8> = Vec::new();
     let this_king = one_d_board.get_piece(position).unwrap();
+    let this_king_color = this_king.color;
     for pcm in possible_castle_moves {
+        let allowed_catles = one_d_board.get_castles();
+        if this_king_color == White && pcm == 2 && !allowed_catles[0] {
+            continue;
+        }
+        else if this_king.color == White && pcm == -2 && !allowed_catles[1] {
+            continue;
+        }
+        else if this_king.color == Black && pcm == 2 && !allowed_catles[2] {
+            continue;
+        }
+        else if this_king.color == Black && pcm == -2 && !allowed_catles[3] {
+            continue;
+        }
+
+
         let dest = calculate_dest(position, pcm);
 
         let mut largest = 0;
@@ -240,7 +285,7 @@ fn validate_castle_moves(
             }
             if square != position {
                 match one_d_board.get_piece(square) {
-                    Some(piece) => {
+                    Some(_piece) => {
                         move_alowed = false;
                         break;
                     }
@@ -298,8 +343,6 @@ fn get_valid_moves_from_piece(
         for valid_move in board_legal_moves {
             if !check_if_move_checks_yourself(one_d_board, position, valid_move) {
                 valid_moves.push(valid_move);
-            } else {
-                let dest = calculate_dest(position, valid_move);
             }
         }
         return valid_moves;
@@ -332,7 +375,7 @@ pub fn every_move(one_d_board: &mut board::OneDBoard, depth: u8) -> usize {
             let dest = calculate_dest(pos, vm);
 
             let mut new_board = one_d_board.clone();
-            let result = new_board.make_move(pos, dest);
+            let _result = new_board.make_move(pos, dest,true);
             count += every_move(&mut new_board, depth - 1);
         }
     }
@@ -358,7 +401,7 @@ fn get_king_pos(one_d_board: &board::OneDBoard, king_color: pieces::Color) -> us
             _ => continue,
         }
     }
-    panic!(format!("No king of color: {:?} on the board!", king_color));
+    panic!("No king of color: {:?} on the board!", king_color);
 }
 
 fn check_if_square_is_attacked(
@@ -400,7 +443,6 @@ pub fn check_if_team_is_in_check(current_board: &mut board::OneDBoard, color: pi
             None => continue,
         };
         let piece_color = piece.color;
-        let turn = current_board.get_turn();
         match color {
             color if color == piece_color => continue,
             _ => (),
@@ -426,7 +468,7 @@ fn check_if_move_checks_yourself(
     let mut new_board = current_board.clone();
     let color: pieces::Color = current_board.get_turn();
     let dest = calculate_dest(origin, a_move);
-    new_board.make_move(origin, dest);
+    let _result = new_board.make_move(origin, dest, false);
     let checked = check_if_team_is_in_check(&mut new_board, color);
     return checked;
 }
@@ -475,14 +517,10 @@ pub fn advance_piece(one_d_board: &mut board::OneDBoard) -> Result<(), &'static 
         println!("Valid moves: {:?}", valid_moves);
         return Err("Can't move there!");
     }
-    let result = one_d_board.make_move(origin, dest);
+    let result = one_d_board.make_move(origin, dest, true);
     match result {
         Ok(_) => Ok(()),
-        Err(E) => return Err(E),
+        Err(e) => return Err(e),
     }
 }
 
-
-fn main() {
-    println!("0");
-}
