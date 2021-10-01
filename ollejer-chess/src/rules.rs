@@ -497,20 +497,14 @@ fn read_move() -> Result<(usize, usize), &'static str> {
     Ok((origin, dest))
 }
 
-pub fn advance_piece(one_d_board: &mut board::OneDBoard) -> Result<(), &'static str> {
-    let result = read_move();
-    let (origin, dest): (usize, usize) = match result {
-        Ok((o, d)) => (o, d),
-        Err(e) => return Err(e),
-    };
-
-    let piece = one_d_board.get_piece(origin);
+pub fn advance_piece_simple(one_d_board: &mut board::OneDBoard, origin:usize, dest:usize) -> Result<(), &'static str> {
+	let piece = one_d_board.get_piece(origin);
     let piece: pieces::Piece = match piece {
         Some(p) => p,
         None => return Err("No Piece on that tile"),
     };
 
-    let valid_moves = get_valid_moves_from_piece(one_d_board, piece, origin, true);
+	let valid_moves = get_valid_moves_from_piece(one_d_board, piece, origin, true);
     let the_move: i8 = dest as i8 - origin as i8;
 
     if !(valid_moves.contains(&the_move)) {
@@ -524,3 +518,12 @@ pub fn advance_piece(one_d_board: &mut board::OneDBoard) -> Result<(), &'static 
     }
 }
 
+pub fn advance_piece(one_d_board: &mut board::OneDBoard) -> Result<(), &'static str> {
+    let result = read_move();
+    let (origin, dest): (usize, usize) = match result {
+        Ok((o, d)) => (o, d),
+        Err(e) => return Err(e),
+    };
+
+    return advance_piece_simple(one_d_board, origin, dest);
+}
