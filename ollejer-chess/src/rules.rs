@@ -318,7 +318,7 @@ fn validate_king_moves(
     valid_moves
 }
 
-fn get_valid_moves_from_piece(
+pub fn get_valid_moves_from_piece(
     one_d_board: &mut board::OneDBoard,
     piece: pieces::Piece,
     position: usize,
