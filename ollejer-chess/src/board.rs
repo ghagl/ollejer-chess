@@ -292,9 +292,19 @@ impl OneDBoard {
             self.board[origin] = None;
         }
 
-        for i in 0..=3 {
-            self.castling[i] = false;
+        if king.color == White {
+            for i in 0..=1 {
+                self.castling[i] = false;
+            }
         }
+        else if king.color == Black {
+            if king.color == White {
+                for i in 2..=3 {
+                    self.castling[i] = false;
+                }
+            }
+        }
+        
 
         Ok(())
     }
